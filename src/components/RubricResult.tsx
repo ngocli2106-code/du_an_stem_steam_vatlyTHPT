@@ -1,7 +1,8 @@
 import { LEVEL_NAMES, type PublishedResult, type Rubric } from '@/lib/rubric';
 import { formatNumberVi } from '@/lib/numbers';
 
-export function RubricResult({ result, rubric }: { result: PublishedResult; rubric: Rubric }) {
+export function RubricResult({ result, rubric, rubricVersion }: { result: PublishedResult; rubric: Rubric; rubricVersion: number }) {
+  const sameRubric = (result.rubricVersion ?? 1) === rubricVersion;
   return (
     <div className="avoid-break">
       <div className="overflow-x-auto">
@@ -12,11 +13,11 @@ export function RubricResult({ result, rubric }: { result: PublishedResult; rubr
           </tr></thead>
           <tbody>
             {result.rows.map((r) => {
-              const c = rubric.criteria.find((x) => x.id === r.id);
+              const desc = r.levelText ?? (sameRubric ? rubric.criteria.find((x) => x.id === r.id)?.levels[r.level] : undefined);
               return (
                 <tr key={r.id}>
                   <td className="border border-slate-400 px-2 py-1 font-semibold">{r.name}</td>
-                  <td className="border border-slate-400 px-2 py-1 text-center">{LEVEL_NAMES[r.level]}{c && <div className="text-xs font-normal text-slate-700">{c.levels[r.level]}</div>}</td>
+                  <td className="border border-slate-400 px-2 py-1 text-center">{LEVEL_NAMES[r.level]}{desc && <div className="text-xs font-normal text-slate-700">{desc}</div>}</td>
                   <td className="border border-slate-400 px-2 py-1 text-center">{formatNumberVi(r.factor)}</td>
                   <td className="border border-slate-400 px-2 py-1 text-center">{formatNumberVi(r.score)} / {formatNumberVi(r.weight)}</td>
                   <td className="border border-slate-400 px-2 py-1">{r.comment}</td>

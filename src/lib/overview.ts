@@ -1,10 +1,11 @@
 import { prisma } from './db';
 import { summarize, isOverdue, type GroupSummary } from './progress';
 import type { StageStatus } from './types';
+import { isPublishedStale } from './rubric';
 
 export interface OverviewRow {
   pgId: string; groupName: string; projectId: string; projectTitle: string; className: string; classId: string; groupId: string;
-  isDemo: boolean; stageKeys: number[]; published: boolean;
+  isDemo: boolean; stageKeys: number[]; published: boolean; publishedStale: boolean;
   stages: { key: number; status: StageStatus; overdue: boolean; due: Date | null }[];
   summary: GroupSummary;
 }
@@ -29,7 +30,7 @@ export async function teacherOverview(teacherId: string, f: { classId?: string; 
     return {
       pgId: pg.id, groupName: pg.group.name, groupId: pg.groupId, projectId: pg.projectId, projectTitle: pg.project.title,
       className: pg.project.class.name, classId: pg.project.classId, isDemo: pg.project.isDemo, stageKeys: keys,
-      published: !!pg.publishedAt, stages,
+      published: !!pg.publishedAt, publishedStale: isPublishedStale(pg.publishedJson ? JSON.parse(pg.publishedJson) : null, pg.project.rubricVersion), stages,
       summary: summarize(stages.map((s) => ({ stageKey: s.key, status: s.status, due: s.due })), now),
     } satisfies OverviewRow;
   });

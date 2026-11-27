@@ -22,6 +22,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   await ensureProjectGroups(id);
   const rows = await teacherOverview(user.id, { projectId: id });
   const rubric: Rubric = JSON.parse(p.rubricJson);
+  const staleCount = rows.filter((r) => r.publishedStale).length;
   return (
     <Shell user={user} wide>
       <Crumbs items={[{ href: '/teacher/projects', label: 'Dự án' }, { label: p.title }]} />
@@ -33,8 +34,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <ul className="text-sm">{p.stages.map((s) => <li key={s.id}>{s.stageKey}. {stageName(s.stageKey)} — {fmtDate(s.dueDate ?? p.dueDate)}{!s.dueDate && ' (theo hạn dự án)'}</li>)}</ul>
           <div className="mt-2"><EditDeadlines projectId={p.id} dueDate={toDateInput(p.dueDate)}
             stages={p.stages.map((s) => ({ key: s.stageKey, dueDate: s.dueDate ? toDateInput(s.dueDate) : '' }))} /></div></div>
-        <div className="md:col-span-2"><h2 className="font-bold">Rubric đã giao (bản lưu cùng dự án)</h2>
-          <ul className="text-sm">{rubric.criteria.map((c) => <li key={c.id}>{c.name}: {c.weight} điểm</li>)}</ul></div>
+        <div className="md:col-span-2"><h2 className="font-bold">Rubric đã giao (bản lưu cùng dự án, phiên bản {p.rubricVersion})</h2>
+          <ul className="text-sm">{rubric.criteria.map((c) => <li key={c.id}>{c.name}: {c.weight} điểm</li>)}</ul>
+          {staleCount > 0 && <p className="mt-1 text-sm font-semibold text-amber-900">{staleCount} nhóm có kết quả công bố theo rubric cũ. Mở hồ sơ nhóm để công bố lại.</p>}
+          <Link href={`/teacher/projects/${p.id}/rubric`} className="btn-secondary btn btn-sm mt-2">Sửa rubric</Link></div>
       </section>
       <section className="card mb-5" aria-labelledby="exp-h"><h2 id="exp-h" className="mb-2 font-bold">Xuất điểm ra CSV</h2><ExportScores projectId={p.id} /></section>
       <ProgressMatrix rows={rows} />

@@ -13,8 +13,10 @@ export interface Rubric { criteria: RubricCriterion[] }
 export interface ScoreEntry { level: number | null; comment: string }
 export interface GradeDraft { scores: Record<string, ScoreEntry>; overallComment: string }
 export interface PublishedResult {
-  rows: { id: string; name: string; weight: number; level: number; factor: number; score: number; comment: string }[];
+  rows: { id: string; name: string; weight: number; level: number; factor: number; score: number; comment: string; levelText?: string }[];
   total: number;
+  /** Phiên bản rubric của dự án tại lúc công bố (không có ở kết quả cũ = phiên bản 1). */
+  rubricVersion?: number;
   overallComment: string;
   publishedAt: string;
 }
@@ -55,7 +57,7 @@ export function computeResult(r: Rubric, d: GradeDraft, publishedAt = new Date()
     if (!Number.isInteger(e.level) || e.level < 0 || e.level > 3) throw new Error('Mức chấm không hợp lệ.');
     return {
       id: c.id, name: c.name, weight: c.weight, level: e.level,
-      factor: LEVEL_FACTORS[e.level], score: criterionScore(c.weight, e.level), comment: e.comment ?? '',
+      factor: LEVEL_FACTORS[e.level], score: criterionScore(c.weight, e.level), comment: e.comment ?? '', levelText: c.levels[e.level],
     };
   });
   return { rows, total: round2(rows.reduce((a, x) => a + x.score, 0)), overallComment: d.overallComment ?? '', publishedAt };
@@ -145,3 +147,18 @@ export const USER_CENTERED_CRITERION: RubricCriterion = {
     'Như mức 3, và chỉ rõ phản hồi người dùng làm thay đổi bản thiết kế như thế nào, kèm minh chứng.',
   ],
 };
+
+/** Tiêu chí có trọng số > 0 nhưng không gắn với chặng nào được giao (dùng cho nhiệm vụ ngắn). */
+export function criteriaOutsideStages(r: Rubric, stageKeys: number[]): RubricCriterion[] {
+  return r.criteria.filter((c) => c.weight > 0 && c.stageKeys.length > 0 && !c.stageKeys.some((k) => stageKeys.includes(k)));
+}
+
+/** Bỏ điểm nháp của các tiêu chí không còn trong rubric. */
+export function pruneDraft(d: GradeDraft, r: Rubric): GradeDraft {
+  const ids = new Set(r.criteria.map((c) => c.id));
+  return { ...d, scores: Object.fromEntries(Object.entries(d.scores).filter(([k]) => ids.has(k))) };
+}
+
+export function isPublishedStale(p: PublishedResult | null, currentVersion: number): boolean {
+  return !!p && (p.rubricVersion ?? 1) !== currentVersion;
+}

@@ -37,7 +37,7 @@ export default async function StudentGroupPage({ params }: { params: Promise<{ p
         <p className="mt-3"><Link href={`/student/p/${v.pg.id}/me`} className="btn-secondary btn">Đóng góp và tự đánh giá của tôi</Link></p>
       </section>
 
-      {v.published && <section className="card mb-4" aria-labelledby="res"><h2 id="res" className="mb-2 text-lg font-bold">Kết quả đã công bố</h2><RubricResult result={v.published} rubric={v.rubric} /></section>}
+      {v.published && <section className="card mb-4" aria-labelledby="res"><h2 id="res" className="mb-2 text-lg font-bold">Kết quả đã công bố</h2><RubricResult result={v.published} rubric={v.rubric} rubricVersion={v.project.rubricVersion} /></section>}
       <ProjectBrief content={v.content} project={v.project} mode={v.mode} />
     </Shell>
   );

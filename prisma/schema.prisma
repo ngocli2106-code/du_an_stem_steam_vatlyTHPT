@@ -103,6 +103,8 @@ model Project {
   isDemo      Boolean   @default(false)
   contentJson String
   rubricJson  String
+  // Tăng mỗi lần giáo viên sửa rubric sau khi giao; kết quả công bố ghi lại phiên bản đã dùng.
+  rubricVersion Int     @default(1)
   createdAt   DateTime  @default(now())
 
   stages        ProjectStage[]

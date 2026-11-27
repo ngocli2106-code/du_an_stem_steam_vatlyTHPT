@@ -11,6 +11,7 @@ import { SubmissionHistory } from '@/components/StageParts';
 import { ProjectBrief } from '@/components/ProjectBrief';
 import { FeedbackForm } from './FeedbackForm';
 import { GradingPanel } from './GradingPanel';
+import { isPublishedStale } from '@/lib/rubric';
 
 export const dynamic = 'force-dynamic';
 
@@ -95,7 +96,7 @@ export default async function TeacherGroupPage({ params, searchParams }: { param
         </div>
 
         <aside className="lg:sticky lg:top-4 lg:self-start">
-          <GradingPanel pgId={pgId} rubric={v.rubric} draft={v.gradeDraft} published={v.published} />
+          <GradingPanel pgId={pgId} rubric={v.rubric} draft={v.gradeDraft} published={v.published} stale={isPublishedStale(v.published, v.project.rubricVersion)} projectId={v.project.id} />
         </aside>
       </div>
     </Shell>

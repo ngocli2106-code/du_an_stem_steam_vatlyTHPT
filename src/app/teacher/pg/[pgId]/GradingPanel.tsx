@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api, ApiError } from '@/lib/client';
 import { criterionScore, LEVEL_NAMES, round2, type GradeDraft, type PublishedResult, type Rubric } from '@/lib/rubric';
 import { formatNumberVi } from '@/lib/numbers';
 import { fmtDateTime } from '@/lib/progress';
 
-export function GradingPanel({ pgId, rubric, draft, published }: { pgId: string; rubric: Rubric; draft: GradeDraft | null; published: PublishedResult | null }) {
+export function GradingPanel({ pgId, rubric, draft, published, stale, projectId }: { pgId: string; rubric: Rubric; draft: GradeDraft | null; published: PublishedResult | null; stale: boolean; projectId: string }) {
   const router = useRouter();
   const [g, setG] = useState<GradeDraft>(draft ?? { scores: {}, overallComment: '' });
   const [dirty, setDirty] = useState(false);
@@ -38,6 +39,7 @@ export function GradingPanel({ pgId, rubric, draft, published }: { pgId: string;
         <p className={`mt-1 rounded-lg border p-2 text-sm font-semibold ${published ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-slate-400 bg-slate-50'}`}>
           {published ? `Đã công bố ${formatNumberVi(published.total)}/100 lúc ${fmtDateTime(published.publishedAt)}. Sửa điểm rồi công bố lại nếu cần.` : 'Chưa công bố: học sinh chưa nhìn thấy điểm nháp.'}
         </p>
+        {stale && <p role="status" className="mt-2 rounded-lg border border-amber-500 bg-amber-50 p-2 text-sm text-amber-900">Rubric của dự án đã được sửa sau lần công bố này. Học sinh vẫn thấy kết quả cũ. Kiểm tra lại các mức rồi bấm “Công bố kết quả” để cập nhật. <Link className="underline" href={`/teacher/projects/${projectId}/rubric`}>Xem rubric</Link></p>}
       </div>
       {rubric.criteria.map((c) => {
         const e = g.scores[c.id];

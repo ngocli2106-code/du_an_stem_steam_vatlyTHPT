@@ -277,6 +277,40 @@ async function main() {
   ok((await T2.req(`/api/projects/${fid}/scores`)).status === 404, 'giáo viên lớp khác không tải được CSV điểm');
   ok((await new Client().req(`/api/projects/${fid}/scores`)).status === 401, 'chưa đăng nhập: 401');
 
+  section('12. Sửa rubric của dự án đã giao');
+  const projF = await prisma.project.findUniqueOrThrow({ where: { id: fid } });
+  ok(projF.rubricVersion === 1, 'dự án mới giao có rubric phiên bản 1');
+  const oldRub = JSON.parse(projF.rubricJson);
+  const newRub = { criteria: [
+    ...oldRub.criteria.filter((c: any) => c.id !== 'c6').map((c: any) => (c.id === 'c1' ? { ...c, name: 'Xác định vấn đề (đã sửa)' } : c)),
+    { id: 'xpres', name: 'Trình bày trước lớp', weight: 10, stageKeys: [7], levels: ['a', 'b', 'c', 'd'] },
+  ] };
+  ok((await T.json(`/api/projects/${fid}/rubric`, 'PUT', { baseVersion: 1, rubric: { criteria: newRub.criteria.slice(0, 2) } })).status === 400, 'rubric tổng ≠ 100 bị từ chối');
+  ok((await A1.json(`/api/projects/${fid}/rubric`, 'PUT', { baseVersion: 1, rubric: newRub })).status === 403, 'học sinh không sửa được rubric');
+  ok((await T2.json(`/api/projects/${fid}/rubric`, 'PUT', { baseVersion: 1, rubric: newRub })).status === 404, 'giáo viên lớp khác không sửa được rubric');
+  const rr = await T.json(`/api/projects/${fid}/rubric`, 'PUT', { baseVersion: 1, rubric: newRub });
+  ok(rr.status === 200 && rr.data.version === 2 && rr.data.drafts === 2 && rr.data.published === 1, 'lưu rubric mới → phiên bản 2', rr);
+  ok((await T.json(`/api/projects/${fid}/rubric`, 'PUT', { baseVersion: 1, rubric: newRub })).status === 409, 'sửa từ phiên bản cũ bị từ chối (409)');
+  const pgBDraft = JSON.parse((await prisma.projectGroup.findUniqueOrThrow({ where: { id: pgB.id } })).gradeDraftJson!);
+  ok(!('c6' in pgBDraft.scores) && pgBDraft.scores.c1?.level === 1 && pgBDraft.overallComment === 'B-DRAFT-ONLY', 'điểm nháp: bỏ tiêu chí đã xoá, giữ mức còn lại');
+  ok((await A2.html(`/student/p/${pgA.id}`)).text.includes('61,25'), 'học sinh vẫn thấy kết quả công bố cũ (61,25)');
+  ok((await T.html(`/teacher?projectId=${fid}`)).text.includes('Công bố theo rubric cũ'), 'bảng tiến độ báo nhóm công bố theo rubric cũ');
+  ok((await T.html(`/teacher/pg/${pgA.id}`)).text.includes('đã được sửa sau lần công bố này'), 'khung chấm điểm cảnh báo cần công bố lại');
+  ok((await (await T.req(`/api/projects/${fid}/scores?format=std`)).text()).includes('Đã công bố (theo rubric cũ)'), 'CSV ghi rõ công bố theo rubric cũ');
+  ok((await T.json(`/api/pg/${pgA.id}/publish`, 'POST')).status === 400, 'chưa chấm tiêu chí mới thì không công bố lại được');
+  const aDraft = JSON.parse((await prisma.projectGroup.findUniqueOrThrow({ where: { id: pgA.id } })).gradeDraftJson!);
+  ok((await T.json(`/api/pg/${pgA.id}/grade`, 'PUT', { ...aDraft, scores: { ...aDraft.scores, xpres: { level: 1, comment: '' } } })).status === 200, 'chấm tiêu chí mới');
+  const rep = await T.json(`/api/pg/${pgA.id}/publish`, 'POST');
+  ok(rep.status === 200 && rep.data.total === 56.25, 'công bố lại theo rubric mới: 56,25', rep);
+  const stuNew = (await A2.html(`/student/p/${pgA.id}`)).text;
+  ok(stuNew.includes('56,25') && stuNew.includes('Trình bày trước lớp') && !stuNew.includes('Báo cáo và trình bày'), 'học sinh thấy kết quả mới với tiêu chí mới');
+  ok(!(await T.html(`/teacher?projectId=${fid}`)).text.includes('Công bố theo rubric cũ'), 'hết cảnh báo sau khi công bố lại');
+  const shortRub = JSON.parse((await prisma.project.findUniqueOrThrow({ where: { id: sid } })).rubricJson);
+  const badShort = { criteria: [{ ...tplRes.data.rubric.criteria[0], weight: 20 }, { ...shortRub.criteria[0], weight: 40 }, { ...shortRub.criteria[1], weight: 40 }] };
+  ok((await T.json(`/api/projects/${sid}/rubric`, 'PUT', { baseVersion: 1, rubric: badShort })).status === 400, 'nhiệm vụ ngắn: không thêm tiêu chí ngoài chặng được giao');
+  ok((await T.html(`/teacher/projects/${fid}/rubric`)).status === 200 && (await T2.html(`/teacher/projects/${fid}/rubric`)).status === 404, 'trang sửa rubric chỉ mở cho giáo viên của lớp');
+  ok(JSON.parse((await prisma.template.findUniqueOrThrow({ where: { id: tpl.id } })).rubricJson).criteria.some((c: any) => c.id === 'c6'), 'mẫu gốc không bị đổi');
+
   // dọn tài khoản kiểm thử phụ
   await prisma.user.deleteMany({ where: { username: 'gv.khac' } });
   console.log(`\n${passed} đạt, ${failed.length} lỗi`);

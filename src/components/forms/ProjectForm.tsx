@@ -2,8 +2,9 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/client';
-import { STAGES, stageName } from '@/lib/stages';
-import { rescaleWeights, totalWeight, USER_CENTERED_CRITERION, validateRubric, type Rubric, type RubricCriterion, LEVEL_NAMES } from '@/lib/rubric';
+import { STAGES } from '@/lib/stages';
+import { totalWeight, validateRubric, type Rubric } from '@/lib/rubric';
+import { RubricEditor, rescaleOn, toRubric, type EditableCriterion } from './RubricEditor';
 import type { Kind, Mode, ProjectContent } from '@/lib/types';
 
 export interface FormInitial {
@@ -39,22 +40,19 @@ export function ProjectForm({ purpose, initial, classes }: { purpose: 'assign' |
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const [all, setAll] = useState<(RubricCriterion & { on: boolean })[]>(() => {
+  const [all, setAll] = useState<EditableCriterion[]>(() => {
     const base = initial.rubric.criteria.map((c) => ({ ...c, on: true }));
     return base;
   });
-  const rubric: Rubric = useMemo(() => ({ criteria: all.filter((c) => c.on).map((c) => ({ id: c.id, name: c.name, weight: c.weight, stageKeys: c.stageKeys, levels: c.levels })) }), [all]);
+  const rubric: Rubric = useMemo(() => toRubric(all), [all]);
   const total = totalWeight(rubric);
   const stageKeys = kind === 'FULL' ? [1, 2, 3, 4, 5, 6, 7] : [...picked].sort();
   const rubricErrors = useMemo(() => validateRubric(rubric), [rubric]);
 
   const setC = (patch: Partial<ProjectContent>) => setContent((c) => ({ ...c, ...patch }));
-  const upCrit = (i: number, p: Partial<RubricCriterion>) => { setAll((a) => a.map((c, j) => (j === i ? { ...c, ...p } : c))); setConfirm(false); };
 
   function applyShort(keys: number[]) {
-    const next = all.map((c) => ({ ...c, on: c.stageKeys.length === 0 || c.stageKeys.some((k) => keys.includes(k)) }));
-    const on = rescaleWeights(next.filter((c) => c.on));
-    setAll(next.map((c) => ({ ...c, weight: on.find((o) => o.id === c.id)?.weight ?? c.weight })));
+    setAll(rescaleOn(all.map((c) => ({ ...c, on: c.stageKeys.length === 0 || c.stageKeys.some((k) => keys.includes(k)) }))));
     setConfirm(false);
   }
   function togglePick(k: number) {
@@ -65,17 +63,6 @@ export function ProjectForm({ purpose, initial, classes }: { purpose: 'assign' |
     setKind(k);
     if (k === 'SHORT') applyShort(picked);
     else { setAll(initial.rubric.criteria.map((c) => ({ ...c, on: true }))); setConfirm(false); }
-  }
-  const rescale = () => {
-    const on = rescaleWeights(all.filter((c) => c.on));
-    setAll(all.map((c) => ({ ...c, weight: on.find((o) => o.id === c.id)?.weight ?? c.weight }))); setConfirm(false);
-  };
-  function addSteam() {
-    if (all.some((c) => c.id === USER_CENTERED_CRITERION.id)) return;
-    setAll([...all, { ...USER_CENTERED_CRITERION, on: true }]);
-  }
-  function addCustom() {
-    setAll([...all, { id: `x${Date.now().toString(36)}`, name: 'Tiêu chí mới', weight: 0, stageKeys: [], levels: ['', '', '', ''], on: true }]);
   }
 
   async function submit(e: React.FormEvent) {
@@ -213,32 +200,8 @@ export function ProjectForm({ purpose, initial, classes }: { purpose: 'assign' |
 
       <section className="card space-y-3" aria-labelledby="s-rub">
         <h2 id="s-rub" className="text-lg font-bold">4. Rubric (thang 100 điểm)</h2>
-        <p className="hint">Hệ số theo mức: {LEVEL_NAMES.map((n, i) => `${n.split(' – ')[0]} = ${[0, 0.5, 0.75, 1][i].toString().replace('.', ',')}`).join(' · ')}. Bản rubric được lưu kèm dự án khi giao, nên sửa mẫu sau này không đổi điểm cũ.</p>
-        <div className={`rounded-lg border p-2 text-sm font-semibold ${total === 100 ? 'border-emerald-500 bg-emerald-50 text-emerald-900' : 'border-rose-500 bg-rose-50 text-rose-900'}`} role="status">
-          Tổng trọng số: {String(total).replace('.', ',')} / 100 {total === 100 ? '✓' : '— cần đúng 100'}
-        </div>
-        <div className="space-y-3">
-          {all.map((c, i) => (
-            <div key={c.id} className={`rounded-lg border p-3 ${c.on ? 'border-slate-400' : 'border-slate-200 bg-slate-50 opacity-70'}`}>
-              <div className="grid items-end gap-2 sm:grid-cols-[auto_1fr_110px]">
-                <label className="inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={c.on} onChange={(e) => upCrit(i, { on: e.target.checked } as any)} /> Dùng</label>
-                <div><label className="label" htmlFor={`rn-${i}`}>Tên tiêu chí</label><input id={`rn-${i}`} className="input" value={c.name} onChange={(e) => upCrit(i, { name: e.target.value })} /></div>
-                <div><label className="label" htmlFor={`rw-${i}`}>Trọng số</label><input id={`rw-${i}`} type="number" min={0} max={100} step="any" className="input" value={c.weight} disabled={!c.on} onChange={(e) => upCrit(i, { weight: Number(e.target.value) })} /></div>
-              </div>
-              <p className="mt-1 text-xs text-slate-700">Gắn với chặng: {c.stageKeys.length ? c.stageKeys.map((k) => `${k}. ${stageName(k)}`).join(', ') : 'không gắn chặng cụ thể'}</p>
-              <details className="mt-2"><summary className="cursor-pointer text-sm font-semibold text-brand-700">Mô tả 4 mức</summary>
-                <div className="mt-2 space-y-2">{c.levels.map((l, j) => (
-                  <div key={j}><label className="label" htmlFor={`rl-${i}-${j}`}>{LEVEL_NAMES[j]}</label>
-                    <textarea id={`rl-${i}-${j}`} className="input" rows={2} value={l} onChange={(e) => upCrit(i, { levels: c.levels.map((x, k) => (k === j ? e.target.value : x)) as RubricCriterion['levels'] })} /></div>))}</div></details>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-secondary btn" onClick={rescale}>Chia lại trọng số về 100</button>
-          {mode === 'STEAM' && !all.some((c) => c.id === USER_CENTERED_CRITERION.id) && <button type="button" className="btn-secondary btn" onClick={addSteam}>+ Thêm tiêu chí “Thiết kế hướng tới người dùng”</button>}
-          <button type="button" className="btn-secondary btn" onClick={addCustom}>+ Thêm tiêu chí khác</button>
-        </div>
-        {rubricErrors.length > 0 && <ul className="list-disc pl-5 text-sm text-rose-900">{rubricErrors.map((e, i) => <li key={i}>{e}</li>)}</ul>}
+        <p className="hint">Bản rubric được lưu kèm dự án khi giao, nên sửa mẫu sau này không đổi điểm cũ.</p>
+        <RubricEditor items={all} onChange={(v) => { setAll(v); setConfirm(false); }} mode={mode} errors={rubricErrors} />
         {purpose === 'assign' && kind === 'SHORT' && (
           <label className="flex min-h-[44px] items-start gap-2 rounded-lg border border-amber-500 bg-amber-50 p-3 text-sm font-semibold">
             <input type="checkbox" className="mt-1" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />

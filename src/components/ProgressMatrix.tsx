@@ -60,7 +60,7 @@ export function ProgressMatrix({ rows }: { rows: OverviewRow[] }) {
                           </Link>
                         </td>
                       ))}
-                      <td className="px-3 py-2 text-xs">{r.published ? <span className="badge border-emerald-500 bg-emerald-50 text-emerald-900">Đã công bố</span> : <span className="text-slate-700">Chưa công bố</span>}</td>
+                      <td className="px-3 py-2 text-xs">{r.published ? (r.publishedStale ? <span className="badge border-amber-500 bg-amber-50 text-amber-900">Công bố theo rubric cũ</span> : <span className="badge border-emerald-500 bg-emerald-50 text-emerald-900">Đã công bố</span>) : <span className="text-slate-700">Chưa công bố</span>}</td>
                     </tr>
                   ))}
                 </tbody>

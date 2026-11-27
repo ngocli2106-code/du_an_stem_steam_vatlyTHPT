@@ -4,7 +4,7 @@ import { requireUser, HttpError } from '@/lib/auth';
 import { loadOwnClass } from '@/lib/access';
 import { handle, readJson } from '@/lib/api';
 import { contentSchema, rubricSchema } from '@/lib/schemas';
-import { validateRubric } from '@/lib/rubric';
+import { criteriaOutsideStages, validateRubric } from '@/lib/rubric';
 import { endOfDayVN } from '@/lib/progress';
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày không hợp lệ');
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     if (errs.length) throw new HttpError(400, 'Rubric chưa hợp lệ: ' + errs.join(' '));
     if (b.kind === 'SHORT') {
       if (!b.confirmRubric) throw new HttpError(400, 'Hãy xác nhận thang điểm trước khi giao nhiệm vụ ngắn.');
-      const bad = b.rubric.criteria.filter((c) => c.weight > 0 && c.stageKeys.length > 0 && !c.stageKeys.some((k) => keys.includes(k)));
+      const bad = criteriaOutsideStages(b.rubric, keys);
       if (bad.length) throw new HttpError(400, `Tiêu chí không gắn với chặng được giao: ${bad.map((c) => c.name).join(', ')}.`);
     }
 

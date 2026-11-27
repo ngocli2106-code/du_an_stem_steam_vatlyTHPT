@@ -185,3 +185,26 @@ describe('xuất CSV', () => {
     expect(t.startsWith('﻿Lớp;Tổng\r\n10A2;61,25\r\n')).toBe(true);
   });
 });
+
+import { criteriaOutsideStages, isPublishedStale, pruneDraft } from '../src/lib/rubric';
+
+describe('sửa rubric sau khi giao', () => {
+  it('bỏ điểm nháp của tiêu chí đã xoá, giữ phần còn lại', () => {
+    const r = { criteria: DEFAULT_RUBRIC.criteria.filter((c) => c.id !== 'c6') };
+    const d = pruneDraft({ scores: { c1: { level: 3, comment: 'a' }, c6: { level: 2, comment: '' } }, overallComment: 'x' }, r);
+    expect(d).toEqual({ scores: { c1: { level: 3, comment: 'a' } }, overallComment: 'x' });
+  });
+  it('kết quả công bố ghi phiên bản rubric và mô tả mức', () => {
+    const scores = Object.fromEntries(DEFAULT_RUBRIC.criteria.map((c) => [c.id, { level: 1, comment: '' }]));
+    const res = computeResult(DEFAULT_RUBRIC, { scores, overallComment: '' });
+    expect(res.rows[0].levelText).toBe(DEFAULT_RUBRIC.criteria[0].levels[1]);
+    expect(isPublishedStale({ ...res, rubricVersion: 2 }, 2)).toBe(false);
+    expect(isPublishedStale({ ...res, rubricVersion: 1 }, 2)).toBe(true);
+    expect(isPublishedStale(res, 1)).toBe(false); // kết quả cũ không ghi phiên bản = phiên bản 1
+    expect(isPublishedStale(null, 3)).toBe(false);
+  });
+  it('tiêu chí ngoài chặng được giao (nhiệm vụ ngắn)', () => {
+    expect(criteriaOutsideStages(DEFAULT_RUBRIC, [5, 6]).map((c) => c.id)).toEqual(['c1', 'c2', 'c3', 'c6']);
+    expect(criteriaOutsideStages({ criteria: [{ ...DEFAULT_RUBRIC.criteria[0], weight: 0 }] }, [5])).toEqual([]);
+  });
+});

@@ -34,21 +34,21 @@ Dự án demo “Thiết kế bao bì…” gắn nhãn **Dữ liệu minh họa
 ## Kiểm thử
 
 ```bash
-npm run lint && npm run typecheck && npm test   # 30 test đơn vị
+npm run lint && npm run typecheck && npm test   # 33 test đơn vị
 npm run build
-npm run test:e2e                                # 102 kiểm tra luồng chính qua HTTP, dùng CSDL riêng data/e2e.db
+npm run test:e2e                                # 121 kiểm tra luồng chính qua HTTP, dùng CSDL riêng data/e2e.db
 ```
 
 ## Quy ước chính
 
 - Số thập phân nhập được cả `12,5` và `12.5`; ô trống ≠ 0; dấu ngăn nghìn không được chấp nhận (`1.234` được hiểu là 1,234).
 - Mỗi lần nộp lưu bản chụp nội dung và tham chiếu minh chứng; phản hồi gắn với đúng lần nộp. Lưu nháp dùng khoá phiên bản (HTTP 409 khi bản cũ).
-- Rubric được chụp kèm dự án khi giao; điểm nháp tách khỏi công bố.
+- Rubric được chụp kèm dự án khi giao (sửa mẫu không ảnh hưởng); sửa rubric của dự án tăng số phiên bản, kết quả công bố ghi phiên bản đã dùng. Điểm nháp tách khỏi công bố.
 - Quyền kiểm tra trên máy chủ cho mọi trang, API và tệp; truy cập trái quyền trả 404.
 
 ## Giới hạn hiện tại
 
-- Đã sửa được hạn nộp của dự án đã giao (trang dự án → “Sửa hạn nộp”) và xuất điểm ra CSV (trang dự án → “Xuất điểm ra CSV”); chưa sửa được rubric hay danh sách chặng sau khi giao.
+- Đã sửa được hạn nộp của dự án đã giao (trang dự án → “Sửa hạn nộp”) và xuất điểm ra CSV (trang dự án → “Xuất điểm ra CSV”), và sửa rubric của dự án đã giao (trang dự án → “Sửa rubric”; kết quả đã công bố giữ nguyên cho tới khi giáo viên công bố lại). Chưa thêm/bớt được chặng sau khi giao.
 - Giới hạn đăng nhập sai lưu trong bộ nhớ tiến trình (mất khi khởi động lại).
 - Tệp chỉ kiểm tra loại bằng chữ kí đầu tệp, chưa quét virus.
 - Học sinh cùng nhóm sửa đồng thời được bảo vệ bằng phát hiện xung đột, không có hợp nhất tự động.

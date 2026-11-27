@@ -12,7 +12,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ pgId: string 
     if (!pg.gradeDraftJson) throw new HttpError(400, 'Chưa có bản nháp điểm để công bố.');
     const rubric: Rubric = JSON.parse(pg.project.rubricJson);
     let result;
-    try { result = computeResult(rubric, JSON.parse(pg.gradeDraftJson) as GradeDraft); }
+    try { result = { ...computeResult(rubric, JSON.parse(pg.gradeDraftJson) as GradeDraft), rubricVersion: pg.project.rubricVersion }; }
     catch (e) { throw new HttpError(400, e instanceof Error ? e.message : 'Không tính được điểm.'); }
     await prisma.projectGroup.update({ where: { id: pg.id }, data: { publishedJson: JSON.stringify(result), publishedAt: new Date(result.publishedAt) } });
     return { ok: true, total: result.total };

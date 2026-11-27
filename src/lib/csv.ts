@@ -27,6 +27,8 @@ export interface ExportGroup {
   members: { code: string | null; name: string; username: string; roleLabel: string }[];
   stagesAssigned: number; stagesApproved: number;
   published: PublishedResult | null; draft: GradeDraft | null;
+  /** Kết quả công bố dựa trên phiên bản rubric cũ hơn rubric hiện tại. */
+  publishedStale?: boolean;
 }
 
 /** Một dòng cho mỗi học sinh; điểm là điểm sản phẩm của nhóm. */
@@ -47,7 +49,7 @@ export function buildScoreRows(rubric: Rubric, groups: ExportGroup[], includeDra
       comment = g.draft.overallComment ?? '';
     } else if (g.published) {
       scores = rubric.criteria.map((c) => g.published!.rows.find((r) => r.id === c.id)?.score ?? null);
-      total = g.published.total; comment = g.published.overallComment; state = 'Đã công bố';
+      total = g.published.total; comment = g.published.overallComment; state = g.publishedStale ? 'Đã công bố (theo rubric cũ)' : 'Đã công bố';
     } else state = includeDraft ? 'Chưa chấm' : 'Chưa công bố';
     const date = g.published ? toVnDate(g.published.publishedAt) : null;
     const members = g.members.length ? g.members : [{ code: null, name: '(nhóm chưa có thành viên)', username: '', roleLabel: '' }];

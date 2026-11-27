@@ -46,7 +46,7 @@ export default async function PrintPage({ params }: { params: Promise<{ pgId: st
 
       <section className="mb-6" aria-labelledby="ps-rub">
         <h2 id="ps-rub" className="print-section-head mb-2 border-b border-slate-400 pb-1 text-lg font-bold">Kết quả đánh giá sản phẩm nhóm</h2>
-        {v.published ? <RubricResult result={v.published} rubric={v.rubric} /> : <p className="text-sm italic">Giáo viên chưa công bố kết quả.</p>}
+        {v.published ? <RubricResult result={v.published} rubric={v.rubric} rubricVersion={v.project.rubricVersion} /> : <p className="text-sm italic">Giáo viên chưa công bố kết quả.</p>}
       </section>
 
       <section className="mb-6" aria-labelledby="ps-ctr">
