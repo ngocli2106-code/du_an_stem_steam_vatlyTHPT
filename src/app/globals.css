@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html { -webkit-text-size-adjust: 100%; }
+body { @apply bg-slate-50 text-slate-900 antialiased; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.5; }
+
+fieldset { min-width: 0; }
+.overflow-x-auto { position: relative; } /* chứa các phần tử sr-only tuyệt đối bên trong bảng cuộn */
+:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; border-radius: 4px; }
+
+@layer components {
+  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn border-brand-700 bg-brand-700 text-white hover:bg-brand-800; }
+  .btn-secondary { @apply btn border-slate-400 bg-white text-slate-900 hover:bg-slate-100; }
+  .btn-danger { @apply btn border-rose-700 bg-white text-rose-800 hover:bg-rose-50; }
+  .btn-sm { @apply min-h-[36px] px-3 py-1 text-xs; }
+  .input { @apply w-full min-h-[44px] rounded-lg border border-slate-400 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-500 disabled:bg-slate-100; }
+  .input-error { @apply border-rose-600 bg-rose-50; }
+  .label { @apply mb-1 block text-sm font-semibold text-slate-800; }
+  .card { @apply rounded-xl border border-slate-300 bg-white p-4 shadow-sm sm:p-5; }
+  .hint { @apply text-sm text-slate-700; }
+  .badge { @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold; }
+}
+
+/* ---------- In A4 ---------- */
+.print-only { display: none; }
+@page { size: A4; margin: 14mm 14mm 16mm 14mm; }
+@media print {
+  html, body { background: #fff !important; font-size: 11pt; }
+  .no-print { display: none !important; }
+  .print-only { display: block; }
+  .card { box-shadow: none; border-color: #94a3b8; }
+  .print-page main { max-width: none !important; padding: 0 !important; }
+  .avoid-break, figure, table.data-table tr, .print-section-head { break-inside: avoid; page-break-inside: avoid; }
+  h2, h3 { break-after: avoid; page-break-after: avoid; }
+  table.data-table thead { display: table-header-group; }
+  table.data-table { break-inside: auto; }
+  .print-chart svg { max-height: 80mm; width: 100%; height: auto; }
+  a { color: inherit; text-decoration: none; }
+  .print-stage { break-before: auto; }
+  .print-stage.page-before { break-before: page; }
+}
