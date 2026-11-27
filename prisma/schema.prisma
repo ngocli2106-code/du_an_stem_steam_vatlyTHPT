@@ -2,9 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Postgres (Neon trên Vercel). DATABASE_URL: chuỗi kết nối qua pooler cho ứng dụng;
+// DATABASE_URL_UNPOOLED: kết nối trực tiếp cho migrate. Tích hợp Neon của Vercel tự đặt cả hai biến.
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // role: TEACHER | STUDENT
@@ -208,4 +211,12 @@ model Contribution {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectGroupId, userId])
+}
+
+// Đếm số lần đăng nhập sai theo tên đăng nhập (dùng chung giữa các phiên bản hàm serverless).
+model LoginThrottle {
+  key       String   @id
+  failures  Int      @default(0)
+  lockedTil DateTime?
+  updatedAt DateTime @updatedAt
 }

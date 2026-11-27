@@ -186,7 +186,11 @@ async function main() {
   const badUp = await upload(A1, pgA.id, 3, Buffer.from('<html><script>alert(1)</script></html>'), 'x.png');
   ok(badUp.status === 415, 'tệp giả ảnh (HTML) bị từ chối', badUp);
   const big = await upload(A1, pgA.id, 3, Buffer.concat([PNG, Buffer.alloc(5 * 1024 * 1024)]), 'big.png');
-  ok(big.status === 413, 'tệp > 5 MB bị từ chối', big.status);
+  ok(big.status === 413, 'tệp > 4 MB bị từ chối', big.status);
+  const near = await upload(A1, pgA.id, 3, Buffer.concat([PNG, Buffer.alloc(4 * 1024 * 1024 - 2048)]), 'gan-4mb.png');
+  ok(near.status === 200, 'tệp gần 4 MB vẫn nhận', near.status);
+  const over = await upload(A1, pgA.id, 3, Buffer.concat([PNG, Buffer.alloc(4 * 1024 * 1024 + 1024)]), 'qua-4mb.png');
+  ok(over.status === 413, 'tệp vượt 4 MB một chút bị từ chối', over.status);
   // giáo viên khác
   await prisma.user.deleteMany({ where: { username: 'gv.khac' } });
   await prisma.user.create({ data: { username: 'gv.khac', displayName: 'GV khác', role: 'TEACHER', passwordHash: await bcrypt.hash('abcd1234', 4) } });
@@ -310,6 +314,17 @@ async function main() {
   ok((await T.json(`/api/projects/${sid}/rubric`, 'PUT', { baseVersion: 1, rubric: badShort })).status === 400, 'nhiệm vụ ngắn: không thêm tiêu chí ngoài chặng được giao');
   ok((await T.html(`/teacher/projects/${fid}/rubric`)).status === 200 && (await T2.html(`/teacher/projects/${fid}/rubric`)).status === 404, 'trang sửa rubric chỉ mở cho giáo viên của lớp');
   ok(JSON.parse((await prisma.template.findUniqueOrThrow({ where: { id: tpl.id } })).rubricJson).criteria.some((c: any) => c.id === 'c6'), 'mẫu gốc không bị đổi');
+
+  section('13. Chặn đăng nhập sai nhiều lần (lưu trong CSDL)');
+  const L = new Client();
+  let last = 0;
+  for (let i = 0; i < 8; i++) last = (await L.json('/api/auth/login', 'POST', { username: 'gv.khac', password: 'sai' })).status;
+  ok(last === 401, '8 lần sai đều trả 401');
+  ok((await L.json('/api/auth/login', 'POST', { username: 'gv.khac', password: 'abcd1234' })).status === 429, 'lần thứ 9 bị khoá (429) kể cả khi đúng mật khẩu');
+  ok((await prisma.loginThrottle.findUnique({ where: { key: 'gv.khac' } }))?.lockedTil != null, 'trạng thái khoá lưu trong CSDL');
+  await prisma.loginThrottle.update({ where: { key: 'gv.khac' }, data: { lockedTil: new Date(Date.now() - 1000) } });
+  ok((await L.json('/api/auth/login', 'POST', { username: 'gv.khac', password: 'abcd1234' })).status === 200, 'hết hạn khoá: đăng nhập đúng được');
+  ok((await prisma.loginThrottle.findUnique({ where: { key: 'gv.khac' } })) === null, 'đăng nhập đúng xoá bộ đếm');
 
   // dọn tài khoản kiểm thử phụ
   await prisma.user.deleteMany({ where: { username: 'gv.khac' } });

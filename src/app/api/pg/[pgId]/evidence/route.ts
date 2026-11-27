@@ -17,12 +17,12 @@ export async function POST(req: Request, ctx: { params: Promise<{ pgId: string }
     if (!(file instanceof File)) throw new HttpError(400, 'Chưa chọn tệp.');
     const { sw, pg, key: stageKey } = await loadStage(u, pgId, key);
     if (!REVISE_STATES.includes(sw.status as StageStatus)) throw new HttpError(409, 'Chặng đang khoá, không thể thêm minh chứng.');
-    if (file.size > MAX_UPLOAD) throw new HttpError(413, 'Tệp quá lớn (tối đa 5 MB).');
+    if (file.size > MAX_UPLOAD) throw new HttpError(413, 'Tệp quá lớn (tối đa 4 MB). Ảnh chụp sẽ được tự nén; với PDF hãy giảm dung lượng trước khi tải.');
     if ((await prisma.evidence.count({ where: { projectGroupId: pg.id } })) >= 60) throw new HttpError(400, 'Hồ sơ đã đạt giới hạn 60 tệp.');
     const buf = Buffer.from(await file.arrayBuffer());
     const kind = sniffMime(buf);
     if (!kind) throw new HttpError(415, 'Chỉ nhận ảnh JPG, PNG, WebP hoặc tệp PDF.');
-    const storedName = await saveUpload(buf, kind.ext);
+    const storedName = await saveUpload(buf, kind);
     const ev = await prisma.evidence.create({
       data: { projectGroupId: pg.id, stageKey, fileName: safeFileName(file.name), storedName, mime: kind.mime, size: buf.length, uploaderId: u.id },
     });

@@ -12,12 +12,16 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
-    "setup": "npm install && prisma generate && prisma migrate deploy && tsx prisma/seed.ts",
+    "setup": "npm install && node scripts/init-env.mjs && prisma migrate deploy && tsx prisma/seed.ts",
     "test": "vitest run",
-    "test:e2e": "bash scripts/run-e2e.sh"
+    "test:e2e": "bash scripts/run-e2e.sh",
+    "postinstall": "prisma generate",
+    "vercel-build": "node scripts/vercel-build.mjs",
+    "db:up": "docker compose up -d db"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@vercel/blob": "^2.9.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.10",
     "jose": "^6.2.18",
@@ -41,5 +45,8 @@
     "tsx": "^4.23.15",
     "typescript": "5.9",
     "vitest": "^5.1.2"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }

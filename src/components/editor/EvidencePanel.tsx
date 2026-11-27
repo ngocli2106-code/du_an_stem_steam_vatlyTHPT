@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
 import type { EvidenceMeta } from '../ContentView';
+import { CLIENT_MAX_UPLOAD, shrinkImage } from '@/lib/image-shrink';
 
 export function EvidencePanel({ pgId, stageKey, items, requirements, onAdd, onCaption, onRemove, disabled }: {
   pgId: string; stageKey: number; items: EvidenceMeta[]; requirements: string[];
@@ -10,10 +11,13 @@ export function EvidencePanel({ pgId, stageKey, items, requirements, onAdd, onCa
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  async function upload(file: File) {
+  async function upload(original: File) {
     setBusy(true); setErr(null);
     try {
-      if (file.size > 5 * 1024 * 1024) throw new Error('Tệp quá lớn (tối đa 5 MB).');
+      const file = await shrinkImage(original);
+      if (file.size > CLIENT_MAX_UPLOAD) {
+        throw new Error(file.type === 'application/pdf' ? 'Tệp PDF quá lớn (tối đa 4 MB). Hãy nén PDF hoặc chụp ảnh từng trang.' : 'Tệp quá lớn (tối đa 4 MB) và không nén được.');
+      }
       const fd = new FormData(); fd.append('file', file); fd.append('stageKey', String(stageKey));
       let res: Response;
       try { res = await fetch(`/api/pg/${pgId}/evidence`, { method: 'POST', body: fd, credentials: 'same-origin' }); }
@@ -52,7 +56,7 @@ export function EvidencePanel({ pgId, stageKey, items, requirements, onAdd, onCa
           <label htmlFor="ev-file" className="btn-secondary btn cursor-pointer">{busy ? 'Đang tải lên…' : '+ Thêm ảnh hoặc PDF'}</label>
           <input id="ev-file" ref={ref} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="sr-only" disabled={busy}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
-          <p className="hint mt-1">JPG, PNG, WebP hoặc PDF, tối đa 5 MB mỗi tệp.</p>
+          <p className="hint mt-1">JPG, PNG, WebP hoặc PDF, tối đa 4 MB mỗi tệp. Ảnh chụp lớn được tự thu nhỏ trước khi gửi.</p>
         </div>
       )}
       {err && <p role="alert" className="rounded-lg border border-rose-500 bg-rose-50 p-2 text-sm text-rose-900">{err}</p>}

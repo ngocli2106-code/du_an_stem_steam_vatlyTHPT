@@ -12,12 +12,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     const ev = await prisma.evidence.findUnique({ where: { id } });
     if (!ev) throw new HttpError(404, 'Không tìm thấy tệp.');
     await loadProjectGroup(u, ev.projectGroupId); // kiểm tra quyền theo hồ sơ nhóm; lỗi => 404
-    let buf: Buffer;
-    try { buf = await readUpload(ev.storedName); } catch { throw new HttpError(404, 'Không tìm thấy tệp.'); }
-    return new NextResponse(new Uint8Array(buf), {
+    const body = await readUpload(ev.storedName);
+    return new NextResponse(body as BodyInit, {
       headers: {
         'Content-Type': ev.mime,
-        'Content-Length': String(buf.length),
+        ...(body instanceof Uint8Array ? { 'Content-Length': String(body.length) } : {}),
         'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(ev.fileName)}`,
         'X-Content-Type-Options': 'nosniff',
         'Content-Security-Policy': "default-src 'none'; sandbox; style-src 'unsafe-inline'",

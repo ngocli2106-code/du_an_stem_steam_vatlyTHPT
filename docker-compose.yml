@@ -1,0 +1,14 @@
+# Postgres cho máy cá nhân: `npm run db:up` (cần Docker). Dữ liệu giữ trong volume stem_pg.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: stem
+      POSTGRES_PASSWORD: stem-local-only
+      POSTGRES_DB: stem
+    ports:
+      - "5432:5432"
+    volumes:
+      - stem_pg:/var/lib/postgresql/data
+volumes:
+  stem_pg:

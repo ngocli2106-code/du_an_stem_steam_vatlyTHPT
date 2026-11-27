@@ -5,7 +5,13 @@ import { BUILTIN_TEMPLATES } from '../src/lib/templates';
 import { endOfDayVN, toDateInput } from '../src/lib/progress';
 
 const prisma = new PrismaClient();
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'demo-stem-2026';
+const DEFAULT_DEMO_PASSWORD = 'demo-stem-2026';
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD || DEFAULT_DEMO_PASSWORD;
+// Mật khẩu mặc định có trong README: không cho dùng ở bản deploy công khai.
+if ((process.env.VERCEL || process.env.NODE_ENV === 'production') && (DEMO_PASSWORD === DEFAULT_DEMO_PASSWORD || DEMO_PASSWORD.length < 10)) {
+  console.error('Hãy đặt biến DEMO_PASSWORD riêng (ít nhất 10 ký tự, khác mật khẩu mặc định) trước khi tạo dữ liệu demo trên bản deploy.');
+  process.exit(1);
+}
 
 async function seedTemplates() {
   for (const t of BUILTIN_TEMPLATES) {

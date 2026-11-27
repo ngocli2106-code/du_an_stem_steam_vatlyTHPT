@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
-# Chạy kiểm thử E2E trên CSDL và thư mục tệp riêng (không đụng dữ liệu demo).
+# Chạy kiểm thử E2E trên một CSDL Postgres riêng (không đụng dữ liệu demo).
+#   E2E_DATABASE_URL=postgresql://user@host:port/stem_e2e npm run test:e2e
+# CSDL sẽ bị XOÁ SẠCH trước khi chạy, nên tên CSDL bắt buộc chứa "e2e" hoặc "test".
 set -euo pipefail
 cd "$(dirname "$0")/.."
-export DATABASE_URL="file:../data/e2e.db"
-export UPLOAD_DIR="./data/uploads-e2e"
-export DEMO_PASSWORD="${DEMO_PASSWORD:-demo-stem-2026}"
-export PORT=3100 BASE_URL="http://localhost:3100"
-export INSECURE_COOKIES=1
-rm -f data/e2e.db data/e2e.db-journal; rm -rf data/uploads-e2e
+: "${E2E_DATABASE_URL:?Đặt E2E_DATABASE_URL tới một CSDL Postgres dành riêng cho kiểm thử}"
+DBNAME="${E2E_DATABASE_URL##*/}"; DBNAME="${DBNAME%%\?*}"
+case "$DBNAME" in *e2e*|*test*) ;; *) echo "Từ chối: tên CSDL '$DBNAME' không chứa 'e2e' hoặc 'test'." >&2; exit 1;; esac
+export DATABASE_URL="$E2E_DATABASE_URL" DATABASE_URL_UNPOOLED="$E2E_DATABASE_URL"
+export STORAGE_DRIVER=local UPLOAD_DIR="./data/uploads-e2e"
+export DEMO_PASSWORD="${E2E_DEMO_PASSWORD:-demo-stem-2026}"
+export PORT=3100 BASE_URL="http://localhost:3100" INSECURE_COOKIES=1
+rm -rf data/uploads-e2e
+echo 'DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;' | npx prisma db execute --stdin --url "$DATABASE_URL" >/dev/null
 npx prisma migrate deploy >/dev/null
-npx tsx prisma/seed.ts >/dev/null
+NODE_ENV=development npx tsx prisma/seed.ts >/dev/null
 [ -d .next ] || npm run build
 ./node_modules/.bin/next start -p "$PORT" >/tmp/e2e-server.log 2>&1 &
 SRV=$!

@@ -208,3 +208,18 @@ describe('sửa rubric sau khi giao', () => {
     expect(criteriaOutsideStages({ criteria: [{ ...DEFAULT_RUBRIC.criteria[0], weight: 0 }] }, [5])).toEqual([]);
   });
 });
+
+import { storageDriver } from '../src/lib/storage';
+
+describe('chọn nơi lưu tệp', () => {
+  const keep = { ...process.env };
+  it('máy cá nhân dùng ổ đĩa, Vercel dùng Blob riêng tư, có thể ép bằng STORAGE_DRIVER', () => {
+    delete process.env.VERCEL; delete process.env.STORAGE_DRIVER;
+    expect(storageDriver()).toBe('local');
+    process.env.VERCEL = '1';
+    expect(storageDriver()).toBe('vercel-blob');
+    process.env.STORAGE_DRIVER = 'local';
+    expect(storageDriver()).toBe('local');
+    process.env = keep;
+  });
+});
