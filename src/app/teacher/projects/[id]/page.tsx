@@ -6,7 +6,8 @@ import { Crumbs, DemoBadge, PageHeader } from '@/components/ui';
 import { ProgressMatrix } from '@/components/ProgressMatrix';
 import { teacherOverview } from '@/lib/overview';
 import { ensureProjectGroups } from '@/lib/project-setup';
-import { fmtDate } from '@/lib/progress';
+import { fmtDate, toDateInput } from '@/lib/progress';
+import { EditDeadlines } from './EditDeadlines';
 import { stageName } from '@/lib/stages';
 import type { Rubric } from '@/lib/rubric';
 
@@ -28,7 +29,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       <section className="card mb-5 grid gap-4 md:grid-cols-2">
         <div><h2 className="font-bold">Mục tiêu</h2><p className="whitespace-pre-wrap text-sm">{p.goals || '—'}</p></div>
         <div><h2 className="font-bold">Chặng được giao và hạn</h2>
-          <ul className="text-sm">{p.stages.map((s) => <li key={s.id}>{s.stageKey}. {stageName(s.stageKey)} — {fmtDate(s.dueDate)}</li>)}</ul></div>
+          <ul className="text-sm">{p.stages.map((s) => <li key={s.id}>{s.stageKey}. {stageName(s.stageKey)} — {fmtDate(s.dueDate ?? p.dueDate)}{!s.dueDate && ' (theo hạn dự án)'}</li>)}</ul>
+          <div className="mt-2"><EditDeadlines projectId={p.id} dueDate={toDateInput(p.dueDate)}
+            stages={p.stages.map((s) => ({ key: s.stageKey, dueDate: s.dueDate ? toDateInput(s.dueDate) : '' }))} /></div></div>
         <div className="md:col-span-2"><h2 className="font-bold">Rubric đã giao (bản lưu cùng dự án)</h2>
           <ul className="text-sm">{rubric.criteria.map((c) => <li key={c.id}>{c.name}: {c.weight} điểm</li>)}</ul></div>
       </section>

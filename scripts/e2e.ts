@@ -235,6 +235,28 @@ async function main() {
   ok((await T.html(`/teacher/projects/${short.data.id}`)).status === 200, 'trang dự án mở được');
   ok((await T2.html(`/teacher/projects/${short.data.id}`)).status === 404, 'giáo viên khác không mở được dự án');
 
+  section('10. Sửa hạn nộp của dự án đã giao');
+  const sid = short.data.id;
+  const notOverdue = await T.html(`/teacher?projectId=${sid}&status=overdue`);
+  ok(!notOverdue.text.includes(`id="p-${sid}"`), 'trước khi sửa: nhiệm vụ ngắn chưa quá hạn');
+  const ed = await T.json(`/api/projects/${sid}`, 'PATCH', { dueDate: '2020-01-10', stages: [{ key: 5, dueDate: '2020-01-05' }, { key: 6, dueDate: null }] });
+  ok(ed.status === 200, 'giáo viên sửa hạn dự án và hạn từng chặng', ed);
+  const ps = await prisma.projectStage.findMany({ where: { projectId: sid }, orderBy: { stageKey: 'asc' } });
+  const pj = await prisma.project.findUniqueOrThrow({ where: { id: sid } });
+  ok(pj.dueDate.toISOString() === '2020-01-10T16:59:59.000Z', 'hạn dự án lưu 23:59 giờ Việt Nam', pj.dueDate);
+  ok(ps[0].dueDate?.toISOString() === '2020-01-05T16:59:59.000Z' && ps[1].dueDate === null, 'chặng 6 để trống → theo hạn dự án', ps);
+  const nowOverdue = await T.html(`/teacher?projectId=${sid}&status=overdue`);
+  ok(nowOverdue.text.includes(`id="p-${sid}"`), 'sau khi sửa: bảng tiến độ tính lại quá hạn');
+  ok((await A1.html(`/student/p/${pgShortA.id}`)).text.includes('10/01/2020'), 'học sinh thấy hạn mới');
+  ok((await T.json(`/api/projects/${sid}`, 'PATCH', { dueDate: '2030-01-10', stages: [{ key: 1, dueDate: null }] })).status === 400, 'không sửa hạn cho chặng không được giao');
+  ok((await T.json(`/api/projects/${sid}`, 'PATCH', { dueDate: '2030-13-45', stages: [] })).status === 400, 'ngày sai bị từ chối');
+  ok((await T2.json(`/api/projects/${sid}`, 'PATCH', { dueDate: '2030-01-10', stages: [] })).status === 404, 'giáo viên lớp khác không sửa được hạn');
+  ok((await A1.json(`/api/projects/${sid}`, 'PATCH', { dueDate: '2030-01-10', stages: [] })).status === 403, 'học sinh không sửa được hạn');
+  const rubBefore = (await prisma.project.findUniqueOrThrow({ where: { id: sid } })).rubricJson;
+  await T.json(`/api/projects/${sid}`, 'PATCH', { dueDate: '2030-01-10', stages: [{ key: 5, dueDate: null }, { key: 6, dueDate: null }] });
+  ok((await prisma.project.findUniqueOrThrow({ where: { id: sid } })).rubricJson === rubBefore, 'sửa hạn không đổi rubric đã giao');
+  ok(!(await T.html(`/teacher?projectId=${sid}&status=overdue`)).text.includes(`id="p-${sid}"`), 'gia hạn → hết quá hạn');
+
   // dọn tài khoản kiểm thử phụ
   await prisma.user.deleteMany({ where: { username: 'gv.khac' } });
   console.log(`\n${passed} đạt, ${failed.length} lỗi`);
