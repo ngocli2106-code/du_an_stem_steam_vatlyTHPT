@@ -257,6 +257,26 @@ async function main() {
   ok((await prisma.project.findUniqueOrThrow({ where: { id: sid } })).rubricJson === rubBefore, 'sửa hạn không đổi rubric đã giao');
   ok(!(await T.html(`/teacher?projectId=${sid}&status=overdue`)).text.includes(`id="p-${sid}"`), 'gia hạn → hết quá hạn');
 
+  section('11. Xuất điểm ra CSV');
+  const fid = full.data.id;
+  const lvB = Object.fromEntries(rub.criteria.map((c: any) => [c.id, { level: 1, comment: '' }]));
+  await T.json(`/api/pg/${pgB.id}/grade`, 'PUT', { scores: lvB, overallComment: 'B-DRAFT-ONLY' });
+  const csvRes = await T.req(`/api/projects/${fid}/scores?format=std`);
+  const csv = await csvRes.text();
+  ok(csvRes.status === 200 && (csvRes.headers.get('content-type') ?? '').startsWith('text/csv') && /attachment/.test(csvRes.headers.get('content-disposition') ?? ''), 'tải CSV (đính kèm, text/csv)');
+  const lines = csv.replace(/^\uFEFF/, '').trim().split('\r\n');
+  ok(lines.length === 1 + 4, 'một dòng tiêu đề + 4 học sinh', lines.length);
+  const rowA = lines.find((l) => l.includes(a1.displayName))!;
+  ok(rowA.includes(',61.25,Đã công bố,'), 'dòng nhóm A có tổng 61.25 đã công bố', rowA);
+  ok(lines.filter((l) => l.includes('Chưa công bố')).length === 2 && !csv.includes('B-DRAFT-ONLY'), 'nhóm B chưa công bố: không lộ điểm nháp');
+  const vn = await (await T.req(`/api/projects/${fid}/scores?format=vn`)).text();
+  ok(vn.includes(';61,25;Đã công bố;'), 'định dạng Excel tiếng Việt: dấu ; và 61,25');
+  const dr = await (await T.req(`/api/projects/${fid}/scores?format=std&draft=1`)).text();
+  ok(dr.includes('B-DRAFT-ONLY') && dr.includes(',50,Nháp,'), 'tuỳ chọn gồm điểm nháp: nhóm B 50 điểm (toàn mức 2)', dr.split('\r\n').find((l) => l.includes('B-DRAFT')));
+  ok((await A1.req(`/api/projects/${fid}/scores`)).status === 403, 'học sinh không tải được CSV điểm');
+  ok((await T2.req(`/api/projects/${fid}/scores`)).status === 404, 'giáo viên lớp khác không tải được CSV điểm');
+  ok((await new Client().req(`/api/projects/${fid}/scores`)).status === 401, 'chưa đăng nhập: 401');
+
   // dọn tài khoản kiểm thử phụ
   await prisma.user.deleteMany({ where: { username: 'gv.khac' } });
   console.log(`\n${passed} đạt, ${failed.length} lỗi`);

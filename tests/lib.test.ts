@@ -145,3 +145,43 @@ describe('tệp và danh sách học sinh', () => {
     expect(slugVi('Đỗ Tiến Dũng')).toBe('do.tien.dung');
   });
 });
+
+import { buildScoreRows, csvCell, toCsv } from '../src/lib/csv';
+
+describe('xuất CSV', () => {
+  const full = Object.fromEntries(DEFAULT_RUBRIC.criteria.map((c, i) => [c.id, { level: [3, 2, 1, 2, 0, 3][i], comment: '' }]));
+  const pub = computeResult(DEFAULT_RUBRIC, { scores: full, overallComment: 'Tốt; cần "thêm" dữ liệu' }, '2026-11-20T03:00:00Z');
+  const g = (over: object) => ({ className: '10A2', groupName: 'Nhóm 1', members: [{ code: 'HS01', name: 'An', username: 'hs.an', roleLabel: 'Nhóm trưởng' }, { code: null, name: 'Bình', username: 'hs.binh', roleLabel: '' }], stagesAssigned: 7, stagesApproved: 2, published: null, draft: null, ...over });
+  it('chống chèn công thức và đặt ngoặc kép', () => {
+    expect(csvCell('=HYPERLINK("x")', 'std')).toBe('"\'=HYPERLINK(""x"")"');
+    expect(csvCell('-1+2', 'vn')).toBe("'-1+2");
+    expect(csvCell('a;b', 'vn')).toBe('"a;b"');
+    expect(csvCell('a;b', 'std')).toBe('a;b');
+    expect(csvCell(61.25, 'vn')).toBe('61,25');
+    expect(csvCell(61.25, 'std')).toBe('61.25');
+    expect(csvCell(0, 'vn')).toBe('0');
+    expect(csvCell(null, 'vn')).toBe('');
+  });
+  it('mỗi học sinh một dòng, điểm công bố đúng tổng', () => {
+    const rows = buildScoreRows(DEFAULT_RUBRIC, [g({ published: pub })], false);
+    expect(rows).toHaveLength(3);
+    expect(rows[1].slice(0, 7)).toEqual(['10A2', 'Nhóm 1', 'HS01', 'An', 'hs.an', 'Nhóm trưởng', '2/7']);
+    expect(rows[1].slice(7, 13)).toEqual([10, 15, 7.5, 18.75, 0, 10]);
+    expect(rows[1][13]).toBe(61.25); expect(rows[1][14]).toBe('Đã công bố'); expect(rows[1][15]).toBe('20/11/2026');
+  });
+  it('điểm nháp không lọt vào bản xuất chỉ gồm điểm công bố', () => {
+    const rows = buildScoreRows(DEFAULT_RUBRIC, [g({ draft: { scores: full, overallComment: 'BÍ MẬT' } })], false);
+    expect(rows[1].slice(7, 14).every((x) => x === null)).toBe(true);
+    expect(rows[1][14]).toBe('Chưa công bố'); expect(rows[1].includes('BÍ MẬT')).toBe(false);
+    const withDraft = buildScoreRows(DEFAULT_RUBRIC, [g({ draft: { scores: full, overallComment: 'BÍ MẬT' } })], true);
+    expect(withDraft[1][13]).toBe(61.25); expect(withDraft[1][14]).toBe('Nháp');
+  });
+  it('nháp chưa đủ tiêu chí: không có tổng', () => {
+    const rows = buildScoreRows(DEFAULT_RUBRIC, [g({ draft: { scores: { c1: { level: 3, comment: '' } }, overallComment: '' } })], true);
+    expect(rows[1][7]).toBe(10); expect(rows[1][13]).toBeNull(); expect(rows[1][14]).toBe('Nháp, chưa chấm đủ');
+  });
+  it('có BOM UTF-8 và xuống dòng CRLF', () => {
+    const t = toCsv([['Lớp', 'Tổng'], ['10A2', 61.25]], 'vn');
+    expect(t.startsWith('﻿Lớp;Tổng\r\n10A2;61,25\r\n')).toBe(true);
+  });
+});

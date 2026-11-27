@@ -34,9 +34,9 @@ Dự án demo “Thiết kế bao bì…” gắn nhãn **Dữ liệu minh họa
 ## Kiểm thử
 
 ```bash
-npm run lint && npm run typecheck && npm test   # 25 test đơn vị
+npm run lint && npm run typecheck && npm test   # 30 test đơn vị
 npm run build
-npm run test:e2e                                # 93 kiểm tra luồng chính qua HTTP, dùng CSDL riêng data/e2e.db
+npm run test:e2e                                # 102 kiểm tra luồng chính qua HTTP, dùng CSDL riêng data/e2e.db
 ```
 
 ## Quy ước chính
@@ -48,7 +48,7 @@ npm run test:e2e                                # 93 kiểm tra luồng chính q
 
 ## Giới hạn hiện tại
 
-- Đã sửa được hạn nộp của dự án đã giao (trang dự án → “Sửa hạn nộp”); chưa sửa được rubric hay danh sách chặng sau khi giao, và chưa có xuất điểm ra CSV.
+- Đã sửa được hạn nộp của dự án đã giao (trang dự án → “Sửa hạn nộp”) và xuất điểm ra CSV (trang dự án → “Xuất điểm ra CSV”); chưa sửa được rubric hay danh sách chặng sau khi giao.
 - Giới hạn đăng nhập sai lưu trong bộ nhớ tiến trình (mất khi khởi động lại).
 - Tệp chỉ kiểm tra loại bằng chữ kí đầu tệp, chưa quét virus.
 - Học sinh cùng nhóm sửa đồng thời được bảo vệ bằng phát hiện xung đột, không có hợp nhất tự động.
