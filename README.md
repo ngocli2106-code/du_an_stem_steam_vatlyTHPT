@@ -25,7 +25,7 @@ Sau khi đã có dữ liệu thật, đặt lại `SEED_DEMO` thành `0` (hoặc
 
 ## Chạy trên máy cá nhân
 
-Cần Node.js ≥ 20.9 và Postgres. Cách nhanh nhất có Docker:
+Cần Node.js 22 và Postgres. Cách nhanh nhất có Docker:
 
 ```bash
 npm run db:up      # Postgres 16 trong Docker (docker-compose.yml)
